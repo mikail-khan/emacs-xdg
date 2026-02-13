@@ -37,12 +37,6 @@ This config is:
 * `consult`
 * `corfu`
 
-## Org + Knowledge Graph
-
-* `org-roam` for knowledge management
-* `org-roam-ui` for browser-based graph
-* **Separate knowledge base per repository**
-
 ## UI
 
 * Official `modus-operandi` (light)
@@ -99,71 +93,6 @@ On first launch:
 * Completion stack activates
 * Modus theme loads
 * System is ready to use
-
----
-
-# Org-roam knowledge bases
-
-This config uses **one knowledge base per repository**.
-
-Each project contains its own `org-roam` directory and database.
-
-## Example project layout
-
-```
-architecture/
-├── .dir-locals.el
-└── org-roam/
-    └── notes.org
-```
-
-### `.dir-locals.el` (required)
-
-Place this file in the project root:
-
-```elisp
-((nil . ((eval . (setq org-roam-directory
-                       (expand-file-name "org-roam"
-                                         (locate-dominating-file
-                                          default-directory
-                                          ".dir-locals.el"))))
-         (eval . (setq org-roam-db-location
-                       (expand-file-name "org-roam.db"
-                                         (locate-dominating-file
-                                          default-directory
-                                          ".dir-locals.el")))))))
-```
-
----
-
-## Creating a new knowledge-base repo
-
-```bash
-mkdir my-project
-cd my-project
-mkdir org-roam
-```
-
-Create `.dir-locals.el` as shown above.
-
-Then:
-
-```bash
-emacs .
-```
-
----
-
-## org-roam keybindings
-
-Inside any org file:
-
-| Key                    | Action              |
-| ---------------------- | ------------------- |
-| `C-c n f`              | Find or create node |
-| `C-c n i`              | Insert link         |
-| `C-c n l`              | Toggle backlinks    |
-| `M-x org-roam-ui-mode` | Open browser graph  |
 
 ---
 
