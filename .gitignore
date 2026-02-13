@@ -1,0 +1,14 @@
+# Emacs runtime
+auto-save-list/
+eln-cache/
+
+# Package data (should be in XDG data)
+elpa/
+
+# Backups
+*~
+#*#
+.#*
+
+# Org-roam databases
+org-roam.db
