@@ -23,6 +23,7 @@
 (require 'mod-eglot)
 (require 'mod-org)
 (require 'mod-ui)
+(require 'mod-rss)
 
 (let ((local-file (expand-file-name "local.el" my/config-dir)))
 (when (file-exists-p local-file)
