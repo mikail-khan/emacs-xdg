@@ -3,9 +3,9 @@
 ;;; nevertheless, you probably don't want to edit it.
 ;;; -*- End Of Bookmark File Format Version Stamp -*-
 (("org-capture-last-stored"
- (filename . "~/GitHub/architecture/org-roam/20260331110611-executive_alignment.org")
+ (filename . "~/GitHub/architecture/org-roam/20260715145055-enterprise.org")
  (front-context-string . "#+filetags: :ea:")
- (rear-context-string . "utive Alignment\n")
- (position . 97)
- (last-modified 27083 40096 480331 181000))
+ (rear-context-string . "tle: Enterprise\n")
+ (position . 88)
+ (last-modified 27223 36942 63843 30000))
 )

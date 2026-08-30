@@ -1,4 +1,4 @@
-;;; init.el --- modern Emacs init -*- lexical-binding: t; -*-
+fin;;; init.el --- modern Emacs init -*- lexical-binding: t; -*-
 
 (defconst my/config-dir user-emacs-directory)
 (defconst my/lisp-dir (expand-file-name "lisp/" my/config-dir))
@@ -10,7 +10,7 @@
 
 (setq custom-file (expand-file-name "custom.el" my/config-dir))
 (when (file-exists-p custom-file)
-  (load custom-file))
+(load custom-file))
 
 (require 'core-perf)
 (require 'core-packages)
@@ -21,14 +21,12 @@
 (require 'mod-project)
 (require 'mod-vc)
 (require 'mod-eglot)
-(require 'mod-python)
 (require 'mod-org)
-(require 'mod-latex)
 (require 'mod-ui)
 (require 'mod-rss)
 
 (let ((local-file (expand-file-name "local.el" my/config-dir)))
-  (when (file-exists-p local-file)
-    (load local-file)))
+(when (file-exists-p local-file)
+(load local-file)))
 
 (message "Modern XDG Emacs config loaded.")

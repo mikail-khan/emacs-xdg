@@ -1,0 +1,777 @@
+
+
+;;; ============================================================
+;;; FILE: early-init.el
+;;; ============================================================
+
+;;; early-init.el --- early startup settings -*- lexical-binding: t; -*-
+
+(setq package-enable-at-startup nil)
+
+;; Disable UI elements safely.
+(when (fboundp 'menu-bar-mode) (menu-bar-mode -1))
+(when (fboundp 'tool-bar-mode) (tool-bar-mode -1))
+(when (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
+
+;; XDG cache location for native compilation.
+(let ((cache-dir (or (getenv "XDG_CACHE_HOME")
+                     (expand-file-name "~/.cache"))))
+  (when (fboundp 'startup-redirect-eln-cache)
+    (startup-redirect-eln-cache
+     (expand-file-name "emacs/eln-cache/" cache-dir))))
+
+;; Temporarily reduce GC activity during startup without disabling it
+;; effectively forever.
+(setq gc-cons-threshold (* 128 1024 1024)
+      gc-cons-percentage 0.6)
+
+
+;;; ============================================================
+;;; FILE: init.el
+;;; ============================================================
+
+;;; init.el --- modern Emacs init -*- lexical-binding: t; -*-
+
+(defconst my/config-dir user-emacs-directory)
+(defconst my/lisp-dir (expand-file-name "lisp/" my/config-dir))
+(defconst my/core-dir (expand-file-name "core/" my/lisp-dir))
+(defconst my/modules-dir (expand-file-name "modules/" my/lisp-dir))
+
+(add-to-list 'load-path my/core-dir)
+(add-to-list 'load-path my/modules-dir)
+
+(setq custom-file (expand-file-name "custom.el" my/config-dir))
+(when (file-exists-p custom-file)
+  (load custom-file))
+
+(require 'core-perf)
+(require 'core-packages)
+(require 'core-ui)
+(require 'core-keys)
+
+(require 'mod-completion)
+(require 'mod-project)
+(require 'mod-vc)
+(require 'mod-eglot)
+(require 'mod-python)
+(require 'mod-org)
+(require 'mod-latex)
+(require 'mod-ui)
+(require 'mod-rss)
+
+(let ((local-file (expand-file-name "local.el" my/config-dir)))
+  (when (file-exists-p local-file)
+    (load local-file)))
+
+(message "Modern XDG Emacs config loaded.")
+
+
+;;; ============================================================
+;;; FILE: custom.el
+;;; ============================================================
+
+;;; -*- lexical-binding: t -*-
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-selected-packages nil)
+ '(safe-local-variable-values
+   '((eval setq org-roam-db-location
+	   (expand-file-name "org-roam.db"
+			     (locate-dominating-file default-directory
+						     ".dir-locals.el")))
+     (eval setq org-roam-directory
+	   (expand-file-name "org-roam"
+			     (locate-dominating-file default-directory
+						     ".dir-locals.el")))
+     (org-roam-db-location . "org-roam.db")
+     (org-roam-directory . "org-roam")
+     (org-roam-db-location . "./org-roam.db")
+     (org-roam-directory . "./org-roam"))))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
+
+
+;;; ============================================================
+;;; FILE: local.el
+;;; ============================================================
+
+;;; local.el --- machine-specific settings
+
+;; Example:
+;; (setq user-full-name "Your Name")
+;; (setq user-mail-address "[you@example.com](mailto:you@example.com)")
+
+
+;;; ============================================================
+;;; FILE: lisp/core/core-keys.el
+;;; ============================================================
+
+;;; core-keys.el --- keybindings -*- lexical-binding: t; -*-
+
+(keymap-global-set "C-x k" #'kill-this-buffer)
+(keymap-global-set "M-o" #'other-window)
+
+(provide 'core-keys)
+
+
+;;; ============================================================
+;;; FILE: lisp/core/core-packages.el
+;;; ============================================================
+
+;;; core-packages.el --- package setup -*- lexical-binding: t; -*-
+
+(require 'package)
+
+;; XDG data directory for packages.
+(let ((data-dir (or (getenv "XDG_DATA_HOME")
+                    (expand-file-name "~/.local/share"))))
+  (setq package-user-dir
+        (expand-file-name "emacs/elpa/" data-dir)))
+
+(setq package-archives
+      '(("gnu"    . "https://elpa.gnu.org/packages/")
+        ("nongnu" . "https://elpa.nongnu.org/nongnu/")
+        ("melpa"  . "https://melpa.org/packages/")))
+
+(package-initialize)
+
+;; `use-package' is bundled with modern Emacs.
+(require 'use-package)
+
+(setq use-package-always-ensure t
+      use-package-always-defer t)
+
+(provide 'core-packages)
+
+
+;;; ============================================================
+;;; FILE: lisp/core/core-perf.el
+;;; ============================================================
+
+;;; core-perf.el --- performance settings -*- lexical-binding: t; -*-
+
+(add-hook 'emacs-startup-hook
+(lambda ()
+(setq gc-cons-threshold (* 16 1024 1024)
+gc-cons-percentage 0.1)))
+
+(setq read-process-output-max (* 1024 1024))
+
+(provide 'core-perf)
+
+
+;;; ============================================================
+;;; FILE: lisp/core/core-ui.el
+;;; ============================================================
+
+;;; core-ui.el --- UI defaults -*- lexical-binding: t; -*-
+
+(setq inhibit-startup-screen t)
+(setq ring-bell-function 'ignore)
+(setq use-dialog-box nil)
+
+(provide 'core-ui)
+
+
+;;; ============================================================
+;;; FILE: lisp/modules/mod-completion.el
+;;; ============================================================
+
+;;; mod-completion.el --- completion stack -*- lexical-binding: t; -*-
+
+(use-package savehist
+  :init
+  (savehist-mode))
+
+(use-package vertico
+  :init
+  (vertico-mode)
+  :custom
+  (vertico-cycle t))
+
+(use-package orderless
+  :init
+  (setq completion-styles '(orderless basic)
+        completion-category-defaults nil
+        completion-category-overrides
+        '((file (styles basic partial-completion))
+          (eglot (styles orderless basic)))))
+
+(use-package marginalia
+  :init
+  (marginalia-mode))
+
+(use-package consult
+  :bind (("C-s" . consult-line)
+         ("C-x b" . consult-buffer)))
+
+(use-package corfu
+  :init
+  (global-corfu-mode)
+  :custom
+  (corfu-auto t)
+  (corfu-auto-delay 0.0)
+  ;; Avoid popping completion before any meaningful input.
+  (corfu-auto-prefix 1)
+  (corfu-cycle t)
+  (corfu-preselect 'prompt)
+  (corfu-quit-no-match 'separator))
+
+(use-package cape
+  :init
+  ;; Keep global CAPFs conservative; language-aware completion such as
+  ;; Eglot gets to do its job without a global keyword CAPF competing.
+  (add-hook 'completion-at-point-functions #'cape-file)
+  (add-hook 'completion-at-point-functions #'cape-dabbrev))
+
+(use-package tempel
+  :bind
+  (("M-+" . tempel-complete)
+   ("M-*" . tempel-insert))
+  :custom
+  (tempel-path
+   (list (expand-file-name "templates/*.eld" user-emacs-directory))))
+
+(use-package tempel-collection
+  :after tempel)
+
+(use-package embark
+  :bind
+  (("C-." . embark-act)
+   ("C-;" . embark-dwim)
+   ("C-h B" . embark-bindings))
+  :init
+  (setq prefix-help-command #'embark-prefix-help-command))
+
+(use-package embark-consult
+  :after (embark consult)
+  :hook
+  (embark-collect-mode . consult-preview-at-point-mode))
+
+(setq tab-always-indent 'complete
+      completion-cycle-threshold 3)
+
+(provide 'mod-completion)
+
+
+;;; ============================================================
+;;; FILE: lisp/modules/mod-eglot.el
+;;; ============================================================
+
+;;; mod-eglot.el --- LSP configuration -*- lexical-binding: t; -*-
+
+(use-package eglot
+  :ensure nil
+  :commands (eglot eglot-ensure)
+  :custom
+  (eglot-autoshutdown t)
+  (eglot-sync-connect nil)
+  (eglot-extend-to-xref t)
+  (eglot-events-buffer-size 0)
+  (eglot-report-progress nil)
+  :config
+  ;; Python -> basedpyright. Individual language modules decide when Eglot
+  ;; starts; do not enable it for every `prog-mode' buffer.
+  (add-to-list 'eglot-server-programs
+               '((python-mode python-ts-mode)
+                 . ("basedpyright-langserver" "--stdio"))))
+
+(provide 'mod-eglot)
+
+
+;;; ============================================================
+;;; FILE: lisp/modules/mod-latex.el
+;;; ============================================================
+
+;;; mod-latex.el --- LaTeX and mathematics editing -*- lexical-binding: t; -*-
+
+;;; Commentary:
+;;
+;; LaTeX environment for:
+;;
+;;   - GNU Emacs 30.x / emacs-nox
+;;   - AUCTeX 14.x
+;;   - TeX Live
+;;   - latexmk
+;;   - Okular
+;;   - SyncTeX forward/inverse search
+;;   - RefTeX
+;;   - CDLaTeX
+;;
+;; PDF viewing is external: Okular.
+;; No graphical Emacs/PDF Tools integration is required.
+
+;;; Code:
+
+;; ---------------------------------------------------------------------------
+;; Per-buffer setup
+;; ---------------------------------------------------------------------------
+
+(defun my/latex-mode-setup ()
+  "Configure a LaTeX buffer for this machine and workflow."
+
+  ;; Soft wrapping is preferable for prose-heavy TeX source.
+  (visual-line-mode 1)
+
+  ;; Let latexmk handle the complete build dependency graph when available.
+  ;; AUCTeX 14.x provides LaTeXMk natively.
+  (when (executable-find "latexmk")
+    (setq-local TeX-command-default "LaTeXMk")))
+
+
+;; ---------------------------------------------------------------------------
+;; AUCTeX
+;; ---------------------------------------------------------------------------
+
+(use-package tex
+  :ensure auctex
+
+  ;; Use AUCTeX's LaTeX mode for .tex files.
+  :mode ("\\.tex\\'" . LaTeX-mode)
+
+  :init
+
+  ;; For multifile documents, let AUCTeX try to discover the master file
+  ;; instead of assuming every included chapter/section is standalone.
+  ;;
+  ;; AUCTeX may write a TeX-master file-local variable once it determines
+  ;; the relationship.
+  (setq-default TeX-master 'dwim)
+
+  :custom
+
+  ;; -------------------------------------------------------------------------
+  ;; Document parsing
+  ;; -------------------------------------------------------------------------
+
+  ;; Save AUCTeX's parsed knowledge of document classes, packages,
+  ;; environments, commands, labels, etc.
+  (TeX-auto-save t)
+
+  ;; Parse documents when they are opened.
+  (TeX-parse-self t)
+
+  ;; Save document buffers automatically before running TeX commands.
+  (TeX-save-query nil)
+
+  ;; -------------------------------------------------------------------------
+  ;; Output
+  ;; -------------------------------------------------------------------------
+
+  ;; Produce PDF directly by default.
+  ;;
+  ;; This remains buffer-local inside AUCTeX, so individual projects can
+  ;; override it if they genuinely require a DVI workflow.
+  (TeX-PDF-mode t)
+
+  ;; -------------------------------------------------------------------------
+  ;; SyncTeX / Okular
+  ;; -------------------------------------------------------------------------
+
+  ;; Generate source/output correlation information.
+  (TeX-source-correlate-mode t)
+
+  ;; Explicitly use SyncTeX rather than source-specials/pdfsync.
+  (TeX-source-correlate-method 'synctex)
+
+  ;; Start an Emacs server automatically when AUCTeX invokes the viewer.
+  ;; This is required for Okular -> terminal Emacs inverse search.
+  (TeX-source-correlate-start-server t)
+
+  ;; Explicitly select AUCTeX's built-in Okular definition for PDFs.
+  ;;
+  ;; The built-in definition already knows how to invoke Okular using
+  ;; --unique and how to add SyncTeX source coordinates.
+  (TeX-view-program-selection
+   '((output-pdf "Okular")))
+
+  ;; -------------------------------------------------------------------------
+  ;; Compilation diagnostics
+  ;; -------------------------------------------------------------------------
+
+  ;; Parse the complete TeX log so all errors/warnings can be navigated.
+  (TeX-parse-all-errors t)
+
+  ;; Automatically show AUCTeX's error overview when compilation actually
+  ;; produces errors or warnings worth reporting.
+  ;;
+  ;; With emacs-nox this appears as an ordinary terminal Emacs window;
+  ;; no graphical frame is required.
+  (TeX-error-overview-open-after-TeX-run t)
+
+  ;; Keep the error overview inside the current terminal Emacs frame.
+  (TeX-error-overview-setup nil)
+
+  :hook
+  (LaTeX-mode . my/latex-mode-setup))
+
+
+;; ---------------------------------------------------------------------------
+;; RefTeX
+;; ---------------------------------------------------------------------------
+
+(use-package reftex
+  :ensure nil
+  :after tex
+
+  :custom
+
+  ;; Integrate RefTeX's labels, references, citations and indices with
+  ;; AUCTeX's document/style information.
+  (reftex-plug-into-AUCTeX t)
+
+  :hook
+  (LaTeX-mode . reftex-mode))
+
+
+;; ---------------------------------------------------------------------------
+;; CDLaTeX
+;; ---------------------------------------------------------------------------
+
+(use-package cdlatex
+  :after tex
+
+  :hook
+  ((LaTeX-mode . turn-on-cdlatex)
+   (org-mode   . turn-on-org-cdlatex)))
+
+
+(provide 'mod-latex)
+
+;;; mod-latex.el ends here
+
+;;; ============================================================
+;;; FILE: lisp/modules/mod-org.el
+;;; ============================================================
+
+;;; mod-org.el --- org and org-roam setup -*- lexical-binding: t; -*-
+
+(use-package org
+  :ensure nil
+  :custom
+  (org-directory "~/org")
+  (org-file-apps
+   '((auto-mode . emacs)
+     ("\\.\\(png\\|jpe?g\\|gif\\|webp\\)\\'" . "feh %s")
+     (t . "xdg-open %s"))))
+
+(use-package org-roam
+  :after org
+  :custom
+  (org-roam-directory (expand-file-name "org-roam" org-directory))
+  (org-roam-completion-everywhere t)
+  :bind
+  (:map org-mode-map
+        ("C-c n f" . org-roam-node-find)
+        ("C-c n i" . org-roam-node-insert)
+        ("C-c n b" . org-roam-buffer-toggle))
+  :config
+  (org-roam-db-autosync-mode))
+
+(use-package org-roam-ui
+  :after org-roam
+  :commands org-roam-ui-mode
+  :custom
+  (org-roam-ui-sync-theme t)
+  (org-roam-ui-follow t)
+  (org-roam-ui-update-on-save t)
+  (org-roam-ui-open-on-start t))
+
+(provide 'mod-org)
+
+
+;;; ============================================================
+;;; FILE: lisp/modules/mod-project.el
+;;; ============================================================
+
+;;; mod-project.el --- project integration -*- lexical-binding: t; -*-
+
+(use-package project
+:ensure nil
+:bind-keymap ("C-c p" . project-prefix-map))
+
+(provide 'mod-project)
+
+
+;;; ============================================================
+;;; FILE: lisp/modules/mod-python.el
+;;; ============================================================
+
+;;; mod-python.el --- Python development -*- lexical-binding: t; -*-
+
+(require 'project)
+
+(defun my/python--project-root ()
+  "Return the current project root, or nil."
+  (when-let ((proj (project-current)))
+    (project-root proj)))
+
+(defun my/python-activate-venv ()
+  "Use PROJECT/.venv for subprocesses in the current buffer when present."
+  (when-let* ((root (my/python--project-root))
+              (venv (expand-file-name ".venv" root))
+              (bin (expand-file-name "bin" venv))
+              ((file-directory-p bin)))
+    ;; Keep PATH/VIRTUAL_ENV changes local to this buffer.  Processes
+    ;; launched from the buffer, including Eglot, inherit this environment.
+    (setq-local process-environment
+                (copy-sequence process-environment))
+    (setq-local exec-path
+                (cons bin exec-path))
+    (setq-local python-shell-virtualenv-root venv)
+
+    (setenv "VIRTUAL_ENV" venv)
+    (setenv "PATH"
+            (concat bin path-separator (getenv "PATH")))))
+
+(defun my/python-settings ()
+  "Apply local Python editing defaults."
+  (setq-local indent-tabs-mode nil
+              tab-width 4
+              python-indent-offset 4))
+
+(defun my/python-format-buffer ()
+  "Format the current Python file using Ruff."
+  (interactive)
+  (unless (derived-mode-p 'python-mode 'python-ts-mode)
+    (user-error "Not a Python buffer"))
+  (unless buffer-file-name
+    (user-error "Buffer is not visiting a file"))
+  (unless (executable-find "ruff")
+    (user-error "ruff executable not found"))
+
+  ;; Ruff formats the file on disk.  Saving first prevents `revert-buffer'
+  ;; from discarding unsaved edits.
+  (save-buffer)
+
+  (let ((status
+         (call-process "ruff" nil "*ruff-format*" nil
+                       "format" buffer-file-name)))
+    (if (zerop status)
+        (revert-buffer :ignore-auto :noconfirm)
+      (display-buffer "*ruff-format*")
+      (user-error "ruff format failed with exit status %s" status))))
+
+(use-package python
+  :ensure nil
+  :mode ("\\.py\\'" . python-mode)
+  :hook
+  ((python-mode . my/python-activate-venv)
+   (python-mode . my/python-settings)
+   ;; Run after venv activation so the server inherits the local
+   ;; subprocess environment.
+   (python-mode . eglot-ensure))
+  :bind
+  (:map python-mode-map
+        ("C-c C-f" . my/python-format-buffer)))
+
+(provide 'mod-python)
+
+
+;;; ============================================================
+;;; FILE: lisp/modules/mod-rss.el
+;;; ============================================================
+
+;;; mod-rss.el --- RSS / Atom feeds (Elfeed) -*- lexical-binding: t; -*-
+
+;; Elfeed configuration
+;; - XDG compliant
+;; - Terminal-friendly
+;; - Tag-based dashboards
+;; - Full-article fetching support
+;; - Deterministic behavior
+
+(use-package elfeed
+  :ensure t
+  :commands (elfeed)
+  :init
+
+  ;; ---------------------------------------------------------------------------
+  ;; XDG-Compliant Data Directory
+  ;; ---------------------------------------------------------------------------
+
+  (defconst my/elfeed-data-dir
+    (expand-file-name
+     "elfeed"
+     (or (getenv "XDG_DATA_HOME")
+         (expand-file-name "~/.local/share/"))))
+
+  (unless (file-directory-p my/elfeed-data-dir)
+    (make-directory my/elfeed-data-dir t))
+
+  (setq elfeed-db-directory my/elfeed-data-dir)
+
+  ;; ---------------------------------------------------------------------------
+  ;; Feed Definitions
+  ;; ---------------------------------------------------------------------------
+
+  (setq elfeed-feeds
+        '(
+          ;; Tech
+          ("https://www.theregister.com/headlines.atom" tech)
+          ("https://hnrss.org/frontpage" tech)
+          ("https://rss.slashdot.org/Slashdot/slashdotMain" tech)
+
+          ;; Linux
+          ("https://www.linuxfoundation.org/blog/rss.xml" linux)
+          ("https://lwn.net/headlines/rss" linux)
+          ("https://www.phoronix.com/rss.php" linux)
+          ("https://archlinux.org/feeds/news/" arch linux)
+
+          ;; Science / Space
+          ("https://www.nasa.gov/rss/dyn/breaking_news.rss" space science)
+          ("https://phys.org/rss-feed/" science)
+
+          ;; Mathematics
+          ("https://www.quantamagazine.org/feed/" math science)
+          ("https://www.ams.org/rss-notices.xml" math academic)
+          ("https://mathoverflow.net/feeds" math research)
+          ("https://export.arxiv.org/rss/math" math research)
+          ))
+
+  ;; Default search filter
+  (setq elfeed-search-filter "@2-weeks-ago +unread"))
+
+;; ---------------------------------------------------------------------------
+;; Search View Configuration
+;; ---------------------------------------------------------------------------
+
+(with-eval-after-load 'elfeed-search
+
+  ;; Wider titles for terminal readability
+  (setq elfeed-search-title-max-width 110)
+
+  ;; ---------------------------------------------------------------------------
+  ;; Saved Dashboards
+  ;; ---------------------------------------------------------------------------
+
+  (setq elfeed-search-saved-filters
+        '(("All Unread" "@2-weeks-ago +unread")
+          ("Math"       "@1-month-ago +math")
+          ("Linux"      "@2-weeks-ago +linux")
+          ("Science"    "@2-weeks-ago +science")
+          ("Tech"       "@2-weeks-ago +tech")))
+
+  ;; ---------------------------------------------------------------------------
+  ;; Quick Dashboard Keybindings
+  ;; ---------------------------------------------------------------------------
+
+  ;; a → All unread
+  (define-key elfeed-search-mode-map (kbd "a")
+    (lambda () (interactive)
+      (elfeed-search-set-filter "@2-weeks-ago +unread")))
+
+  ;; m → Math
+  (define-key elfeed-search-mode-map (kbd "m")
+    (lambda () (interactive)
+      (elfeed-search-set-filter "@1-month-ago +math")))
+
+  ;; l → Linux
+  (define-key elfeed-search-mode-map (kbd "l")
+    (lambda () (interactive)
+      (elfeed-search-set-filter "@2-weeks-ago +linux")))
+
+  ;; s → Science
+  (define-key elfeed-search-mode-map (kbd "s")
+    (lambda () (interactive)
+      (elfeed-search-set-filter "@2-weeks-ago +science")))
+
+  ;; t → Tech
+  (define-key elfeed-search-mode-map (kbd "t")
+    (lambda () (interactive)
+      (elfeed-search-set-filter "@2-weeks-ago +tech")))
+
+  ;; R → Mark all visible entries as read
+  (define-key elfeed-search-mode-map (kbd "R")
+    (lambda ()
+      (interactive)
+      (mark-whole-buffer)
+      (elfeed-search-untag-all-unread))))
+
+(provide 'mod-rss)
+
+
+;;; ============================================================
+;;; FILE: lisp/modules/mod-ui.el
+;;; ============================================================
+
+;;; mod-ui.el --- UI configuration -*- lexical-binding: t; -*-
+
+;; Modus configuration (set before loading a theme).
+(setq modus-themes-bold-constructs t
+      modus-themes-italic-constructs t
+      modus-themes-mixed-fonts nil
+      modus-themes-variable-pitch-ui nil
+      modus-themes-org-blocks 'tinted-background
+      modus-themes-completions '((matches . (bold))
+                                 (selection . (accented))
+                                 (popup . (accented))))
+
+(defun my/current-hour ()
+  "Return current hour as an integer."
+  (string-to-number (format-time-string "%H")))
+
+(defun my/should-use-dark-theme-p ()
+  "Return non-nil when the dark theme should be active."
+  (let ((hour (my/current-hour)))
+    (or (>= hour 17) (< hour 7))))
+
+(defun my/desired-modus-theme ()
+  "Return the Modus theme appropriate for the current time."
+  (if (my/should-use-dark-theme-p)
+      'modus-vivendi-tinted
+    'modus-operandi-deuteranopia))
+
+(defun my/load-appropriate-modus-theme ()
+  "Load the time-appropriate Modus theme unless it is already active."
+  (let ((desired (my/desired-modus-theme)))
+    (unless (memq desired custom-enabled-themes)
+      (mapc #'disable-theme custom-enabled-themes)
+      (load-theme desired t))))
+
+(defun my/toggle-modus-theme ()
+  "Temporarily toggle between the configured light and dark Modus themes.
+
+The scheduled theme check may restore the time-appropriate theme later."
+  (interactive)
+  (let ((next (if (memq 'modus-vivendi-tinted custom-enabled-themes)
+                  'modus-operandi-deuteranopia
+                'modus-vivendi-tinted)))
+    (mapc #'disable-theme custom-enabled-themes)
+    (load-theme next t)))
+
+(my/load-appropriate-modus-theme)
+
+;; Re-check once per hour.  A manual toggle is therefore temporary.
+(run-at-time "1 hour" 3600 #'my/load-appropriate-modus-theme)
+
+(keymap-global-set "C-c t" #'my/toggle-modus-theme)
+
+(provide 'mod-ui)
+
+
+;;; ============================================================
+;;; FILE: lisp/modules/mod-vc.el
+;;; ============================================================
+
+;;; mod-vc.el --- version control -*- lexical-binding: t; -*-
+
+(use-package magit
+  :commands (magit-status)
+  :bind ("C-x g" . magit-status))
+
+(use-package forge
+  :after magit)
+
+(use-package diff-hl
+  :hook ((prog-mode . diff-hl-mode)
+         (magit-post-refresh . diff-hl-magit-post-refresh)))
+
+(provide 'mod-vc)
